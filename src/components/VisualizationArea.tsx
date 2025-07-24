@@ -17,8 +17,38 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
 
   const { title, explanation, complexity, steps, sampleData } = algorithmData;
 
+  // Before rendering, ensure sorting algorithms end with a fully sorted array
+  let displaySteps = steps;
+  function isSorted(arr) {
+    if (!Array.isArray(arr)) return false;
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i] < arr[i - 1]) return false;
+    }
+    return true;
+  }
+  // Heuristic: if the title or action mentions 'sort', treat as sorting algorithm
+  const isSortingAlgorithm = title && /sort/i.test(title);
+  if (isSortingAlgorithm && steps.length > 0) {
+    const lastStep = steps[steps.length - 1];
+    const arr = lastStep.data;
+    if (!isSorted(arr)) {
+      displaySteps = [
+        ...steps,
+        {
+          ...lastStep,
+          step: steps.length + 1,
+          title: "Final Sorted Array",
+          description: "The array is now fully sorted.",
+          data: [...arr].sort((a, b) => a - b),
+          highlights: [],
+          action: "done"
+        }
+      ];
+    }
+  }
+
   useEffect(() => {
-    if (!svgRef.current || !steps.length) return;
+    if (!svgRef.current || !displaySteps.length) return;
 
     // Initialize D3 visualization
     const svg = d3.select(svgRef.current);
@@ -31,7 +61,7 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
     // Get current step data
-    const currentStepData = steps[currentStep];
+    const currentStepData = displaySteps[currentStep];
     const data = currentStepData?.data || sampleData;
     const highlights = currentStepData?.highlights || [];
     
@@ -452,14 +482,14 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
       return;
     }
 
-  }, [currentStep, steps, sampleData]);
+  }, [currentStep, displaySteps, sampleData]);
 
   // Auto-play functionality
   useEffect(() => {
-    if (isPlaying && steps.length > 0) {
+    if (isPlaying && displaySteps.length > 0) {
       const id = setInterval(() => {
         setCurrentStep(prev => {
-          if (prev >= steps.length - 1) {
+          if (prev >= displaySteps.length - 1) {
             setIsPlaying(false);
             return prev;
           }
@@ -475,7 +505,7 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isPlaying, steps.length]);
+  }, [isPlaying, displaySteps.length]);
 
   const handlePlay = () => {
     setIsPlaying(!isPlaying);
@@ -491,7 +521,7 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
   };
 
   const handleStepForward = () => {
-    if (steps && currentStep < steps.length - 1) {
+    if (displaySteps && currentStep < displaySteps.length - 1) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -503,7 +533,7 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
   };
 
   const handleShowSolution = () => {
-    if (currentStep === steps.length - 1) return;
+    if (currentStep === displaySteps.length - 1) return;
     setIsPlaying(true);
     // If already playing, do nothing (let the normal auto-play logic handle it)
   };
@@ -564,7 +594,7 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
             variant="outline"
             size="sm"
             onClick={handleStepForward}
-            disabled={!steps.length || currentStep >= steps.length - 1}
+            disabled={!displaySteps.length || currentStep >= displaySteps.length - 1}
           >
             <SkipForward className="w-4 h-4" />
           </Button>
@@ -572,32 +602,32 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
             variant="default"
             size="sm"
             onClick={handleShowSolution}
-            disabled={currentStep === steps.length - 1 || isPlaying}
+            disabled={currentStep === displaySteps.length - 1 || isPlaying}
             className="ml-4 bg-accent text-white font-bold"
           >
             Show Solution
           </Button>
         </div>
         
-        {steps.length > 0 && (
+        {displaySteps.length > 0 && (
           <div className="mt-3 text-center text-sm text-muted-foreground">
-            Step {currentStep + 1} of {steps.length}
+            Step {currentStep + 1} of {displaySteps.length}
           </div>
         )}
       </Card>
 
       {/* Current Step Details */}
-      {steps.length > 0 && (
+      {displaySteps.length > 0 && (
         <Card className="p-6 bg-gradient-card border-border/30">
           <h3 className="text-lg font-semibold mb-4">Current Step</h3>
           <div className="space-y-3">
             <div>
-              <h4 className="font-medium text-primary">{steps[currentStep]?.title}</h4>
-              <p className="text-muted-foreground mt-1">{steps[currentStep]?.description}</p>
+              <h4 className="font-medium text-primary">{displaySteps[currentStep]?.title}</h4>
+              <p className="text-muted-foreground mt-1">{displaySteps[currentStep]?.description}</p>
             </div>
-            {steps[currentStep]?.code && (
+            {displaySteps[currentStep]?.code && (
               <div className="bg-background/50 rounded-lg p-3 border border-border/30">
-                <code className="text-sm font-mono text-accent">{steps[currentStep].code}</code>
+                <code className="text-sm font-mono text-accent">{displaySteps[currentStep].code}</code>
               </div>
             )}
           </div>
@@ -605,23 +635,23 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
       )}
 
       {/* Solution Summary Panel (only on last step) */}
-      {currentStep === steps.length - 1 && (
+      {currentStep === displaySteps.length - 1 && (
         <Card className="p-6 bg-gradient-card border-accent/50 border-2">
           <h3 className="text-lg font-bold mb-2 text-accent">Solution Summary</h3>
           <div className="text-base text-foreground">
             {/* Try to summarize the result for common algorithms */}
-            {Array.isArray(steps[currentStep]?.data) && steps[currentStep]?.data.length > 0 && typeof steps[currentStep].data[0] === 'object' ? (
+            {Array.isArray(displaySteps[currentStep]?.data) && displaySteps[currentStep]?.data.length > 0 && typeof displaySteps[currentStep].data[0] === 'object' ? (
               <>
                 <div className="mb-2 font-semibold">Final State:</div>
                 <pre className="bg-background/80 rounded p-2 text-sm overflow-x-auto">
-                  {JSON.stringify(steps[currentStep].data, null, 2)}
+                  {JSON.stringify(displaySteps[currentStep].data, null, 2)}
                 </pre>
               </>
-            ) : Array.isArray(steps[currentStep]?.data) ? (
+            ) : Array.isArray(displaySteps[currentStep]?.data) ? (
               <>
                 <div className="mb-2 font-semibold">Final Array:</div>
                 <pre className="bg-background/80 rounded p-2 text-sm overflow-x-auto">
-                  {JSON.stringify(steps[currentStep].data)}
+                  {JSON.stringify(displaySteps[currentStep].data)}
                 </pre>
               </>
             ) : (
