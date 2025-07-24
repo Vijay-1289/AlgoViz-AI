@@ -1,12 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Hero } from "@/components/Hero";
+import { VisualizationArea } from "@/components/VisualizationArea";
 
 const Index = () => {
+  const [currentAlgorithm, setCurrentAlgorithm] = useState<string>("");
+  const [explanation, setExplanation] = useState<string>("");
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Hero Section */}
+      <Hero />
+      
+      {/* Visualization Section - Shows when algorithm is selected */}
+      {currentAlgorithm && (
+        <section className="py-16 px-6">
+          <div className="max-w-6xl mx-auto">
+            <VisualizationArea 
+              algorithm={currentAlgorithm}
+              explanation={explanation}
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 };

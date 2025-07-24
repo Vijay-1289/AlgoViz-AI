@@ -52,6 +52,19 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				algorithm: {
+					DEFAULT: 'hsl(var(--algorithm))',
+					foreground: 'hsl(var(--algorithm-foreground))'
+				},
+				visualization: {
+					DEFAULT: 'hsl(var(--visualization))',
+					foreground: 'hsl(var(--visualization-foreground))'
+				},
+				step: {
+					active: 'hsl(var(--step-active))',
+					complete: 'hsl(var(--step-complete))',
+					pending: 'hsl(var(--step-pending))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -62,6 +75,11 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			backgroundImage: {
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-card': 'var(--gradient-card)',
+				'gradient-accent': 'var(--gradient-accent)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
