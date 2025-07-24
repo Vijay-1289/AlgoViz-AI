@@ -47,6 +47,70 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     }
   }
 
+  // For searching algorithms, ensure the last step shows the result
+  function isSearchingAlgorithm(title) {
+    return title && /(search|find)/i.test(title);
+  }
+  if (isSearchingAlgorithm(title) && steps.length > 0) {
+    const lastStep = displaySteps[displaySteps.length - 1];
+    // Heuristic: if highlights contains a single index, treat as found
+    const foundIndex = Array.isArray(lastStep.highlights) && lastStep.highlights.length === 1 ? lastStep.highlights[0] : undefined;
+    const found = foundIndex !== undefined && lastStep.data && lastStep.data[foundIndex] !== undefined;
+    // If the last step doesn't explicitly state the result, append a summary
+    if (!lastStep.title?.toLowerCase().includes('result') && !lastStep.description?.toLowerCase().includes('found')) {
+      displaySteps = [
+        ...displaySteps,
+        {
+          ...lastStep,
+          step: displaySteps.length + 1,
+          title: "Search Result",
+          description: found ? `Target found at index ${foundIndex}` : "Target not found.",
+          highlights: found ? [foundIndex] : [],
+          action: "done"
+        }
+      ];
+    }
+  }
+  // For graph algorithms (MST/pathfinding), ensure the last step shows the full solution
+  function isMSTorPathAlgorithm(title) {
+    return title && /(mst|min(imum)? spanning tree|dijkstra|bfs|dfs|a\*|kruskal|prim|path)/i.test(title);
+  }
+  if (isMSTorPathAlgorithm(title) && steps.length > 0) {
+    const lastStep = displaySteps[displaySteps.length - 1];
+    // Heuristic: if data is an array of objects with 'inMST' or 'visited' or 'path', summarize
+    const isMST = Array.isArray(lastStep.data) && lastStep.data.some(e => 'inMST' in e);
+    const isPath = Array.isArray(lastStep.data) && lastStep.data.some(e => 'path' in e || 'visited' in e);
+    if (isMST && !lastStep.title?.toLowerCase().includes('mst')) {
+      const mstEdges = lastStep.data.filter(e => e.inMST);
+      displaySteps = [
+        ...displaySteps,
+        {
+          ...lastStep,
+          step: displaySteps.length + 1,
+          title: "MST Complete",
+          description: `Minimum Spanning Tree complete. Edges: ${JSON.stringify(mstEdges)}. Total weight: ${mstEdges.reduce((sum, e) => sum + (e.weight || 0), 0)}`,
+          data: lastStep.data,
+          highlights: mstEdges.map((_, i) => i),
+          action: "done"
+        }
+      ];
+    } else if (isPath && !lastStep.title?.toLowerCase().includes('path')) {
+      const pathNodes = lastStep.data.filter(e => e.path || e.visited);
+      displaySteps = [
+        ...displaySteps,
+        {
+          ...lastStep,
+          step: displaySteps.length + 1,
+          title: "Path Found",
+          description: `Path: ${JSON.stringify(pathNodes)}`,
+          data: lastStep.data,
+          highlights: pathNodes.map((_, i) => i),
+          action: "done"
+        }
+      ];
+    }
+  }
+
   useEffect(() => {
     if (!svgRef.current || !displaySteps.length) return;
 
