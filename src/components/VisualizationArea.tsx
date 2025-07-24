@@ -38,7 +38,22 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     // Data type detection
     const isArrayOfNumbers = Array.isArray(data) && typeof data[0] === 'number';
     const isArrayOfObjects = Array.isArray(data) && typeof data[0] === 'object' && data[0] !== null;
+    const is2DArray = Array.isArray(data) && Array.isArray(data[0]);
     const isGraphAlgorithm = isArrayOfObjects && 'id' in data[0];
+
+    // Detect tree structure (binary tree, segment tree, etc.)
+    function isTree(node) {
+      return node && (node.left || node.right || node.children);
+    }
+    function isTrie(node) {
+      return node && node.children && typeof node.children === 'object' && !Array.isArray(node.children);
+    }
+    function isBoard(data) {
+      return is2DArray && data.length > 0 && data[0].length > 0 && typeof data[0][0] === 'number';
+    }
+    function isBitArray(data) {
+      return isArrayOfNumbers && data.every(n => Number.isInteger(n) && n >= 0 && n <= 0xFFFFFFFF);
+    }
 
     // Helper: generate circular node positions for any n
     function getNodePositions(n, width, height, radius = 150, centerX = width/2, centerY = height/2) {
@@ -191,16 +206,241 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
       return;
     }
 
-    // If data is not visualizable, show a message
-    svg.append("text")
-      .attr("x", width / 2)
-      .attr("y", height / 2)
-      .attr("text-anchor", "middle")
-      .attr("fill", "hsl(var(--destructive))")
-      .attr("font-size", "20px")
-      .attr("font-weight", "bold")
-      .text("Cannot visualize this algorithm's data");
-    return;
+    // Render 2D array (dynamic programming table)
+    if (is2DArray) {
+      const cellSize = 40;
+      const table = data;
+      const numRows = table.length;
+      const numCols = Math.max(...table.map(row => row.length));
+      // Draw cells
+      table.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          svg.append("rect")
+            .attr("x", margin.left + j * cellSize)
+            .attr("y", margin.top + i * cellSize)
+            .attr("width", cellSize)
+            .attr("height", cellSize)
+            .attr("fill", highlights && highlights.some(([hi, hj]) => hi === i && hj === j) ? "hsl(var(--step-active))" : "hsl(var(--primary))")
+            .attr("stroke", "hsl(var(--border))")
+            .attr("stroke-width", 1);
+          svg.append("text")
+            .attr("x", margin.left + j * cellSize + cellSize / 2)
+            .attr("y", margin.top + i * cellSize + cellSize / 2 + 5)
+            .attr("text-anchor", "middle")
+            .attr("fill", "hsl(var(--foreground))")
+            .attr("font-size", "14px")
+            .text(cell);
+        });
+      });
+      return;
+    }
+
+    // Render generic array of objects as a table
+    if (isArrayOfObjects) {
+      const keys = Object.keys(data[0]);
+      const cellSize = 40;
+      // Draw header
+      keys.forEach((key, j) => {
+        svg.append("rect")
+          .attr("x", margin.left + j * cellSize)
+          .attr("y", margin.top)
+          .attr("width", cellSize)
+          .attr("height", cellSize)
+          .attr("fill", "hsl(var(--accent))")
+          .attr("stroke", "hsl(var(--border))")
+          .attr("stroke-width", 1);
+        svg.append("text")
+          .attr("x", margin.left + j * cellSize + cellSize / 2)
+          .attr("y", margin.top + cellSize / 2 + 5)
+          .attr("text-anchor", "middle")
+          .attr("fill", "hsl(var(--foreground))")
+          .attr("font-size", "14px")
+          .attr("font-weight", "bold")
+          .text(key);
+      });
+      // Draw rows
+      data.forEach((row, i) => {
+        keys.forEach((key, j) => {
+          svg.append("rect")
+            .attr("x", margin.left + j * cellSize)
+            .attr("y", margin.top + (i + 1) * cellSize)
+            .attr("width", cellSize)
+            .attr("height", cellSize)
+            .attr("fill", highlights && highlights.includes(i) ? "hsl(var(--step-active))" : "hsl(var(--primary))")
+            .attr("stroke", "hsl(var(--border))")
+            .attr("stroke-width", 1);
+          svg.append("text")
+            .attr("x", margin.left + j * cellSize + cellSize / 2)
+            .attr("y", margin.top + (i + 1) * cellSize + cellSize / 2 + 5)
+            .attr("text-anchor", "middle")
+            .attr("fill", "hsl(var(--foreground))")
+            .attr("font-size", "14px")
+            .text(row[key]);
+        });
+      });
+      return;
+    }
+
+    // Tree visualization (binary tree, segment tree, etc.)
+    if (isArrayOfObjects && isTree(data[0])) {
+      // Assume data[0] is the root node
+      const root = data[0];
+      // Convert tree to D3 hierarchy
+      function toD3Tree(node) {
+        if (!node) return null;
+        let children = [];
+        if (node.left) children.push(node.left);
+        if (node.right) children.push(node.right);
+        if (node.children && Array.isArray(node.children)) children = node.children;
+        return {
+          name: node.value !== undefined ? node.value : node.key || node.id || '',
+          ...node,
+          children: children.map(toD3Tree).filter(Boolean)
+        };
+      }
+      const d3Tree = d3.hierarchy(toD3Tree(root));
+      const treeLayout = d3.tree().size([width - 100, height - 100]);
+      const treeData = treeLayout(d3Tree);
+      // Draw links
+      treeData.links().forEach(link => {
+        svg.append('line')
+          .attr('x1', link.source.x + 50)
+          .attr('y1', link.source.y + 50)
+          .attr('x2', link.target.x + 50)
+          .attr('y2', link.target.y + 50)
+          .attr('stroke', 'hsl(var(--border))')
+          .attr('stroke-width', 2);
+      });
+      // Draw nodes
+      treeData.descendants().forEach((d, i) => {
+        svg.append('circle')
+          .attr('cx', d.x + 50)
+          .attr('cy', d.y + 50)
+          .attr('r', 20)
+          .attr('fill', highlights && highlights.includes(i) ? 'hsl(var(--step-active))' : 'hsl(var(--primary))')
+          .attr('stroke', 'hsl(var(--border))')
+          .attr('stroke-width', 2);
+        svg.append('text')
+          .attr('x', d.x + 50)
+          .attr('y', d.y + 55)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'hsl(var(--foreground))')
+          .attr('font-size', '14px')
+          .attr('font-weight', 'bold')
+          .text(d.data.name);
+      });
+      return;
+    }
+
+    // Trie visualization
+    if (isArrayOfObjects && isTrie(data[0])) {
+      // Render trie as a tree, but label edges with characters
+      // For simplicity, treat children as an object: {char: childNode}
+      function toD3Trie(node, label = '') {
+        if (!node) return null;
+        const children = Object.entries(node.children || {}).map(([char, child]) => toD3Trie(child, char)).filter(Boolean);
+        return {
+          name: node.value !== undefined ? node.value : node.key || node.id || '',
+          edgeLabel: label,
+          ...node,
+          children
+        };
+      }
+      const root = data[0];
+      const d3Trie = d3.hierarchy(toD3Trie(root));
+      const treeLayout = d3.tree().size([width - 100, height - 100]);
+      const treeData = treeLayout(d3Trie);
+      // Draw links with edge labels
+      treeData.links().forEach(link => {
+        svg.append('line')
+          .attr('x1', link.source.x + 50)
+          .attr('y1', link.source.y + 50)
+          .attr('x2', link.target.x + 50)
+          .attr('y2', link.target.y + 50)
+          .attr('stroke', 'hsl(var(--border))')
+          .attr('stroke-width', 2);
+        svg.append('text')
+          .attr('x', (link.source.x + link.target.x) / 2 + 50)
+          .attr('y', (link.source.y + link.target.y) / 2 + 40)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'hsl(var(--accent))')
+          .attr('font-size', '12px')
+          .text(link.target.data.edgeLabel || '');
+      });
+      // Draw nodes
+      treeData.descendants().forEach((d, i) => {
+        svg.append('circle')
+          .attr('cx', d.x + 50)
+          .attr('cy', d.y + 50)
+          .attr('r', 20)
+          .attr('fill', highlights && highlights.includes(i) ? 'hsl(var(--step-active))' : 'hsl(var(--primary))')
+          .attr('stroke', 'hsl(var(--border))')
+          .attr('stroke-width', 2);
+        svg.append('text')
+          .attr('x', d.x + 50)
+          .attr('y', d.y + 55)
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'hsl(var(--foreground))')
+          .attr('font-size', '14px')
+          .attr('font-weight', 'bold')
+          .text(d.data.name);
+      });
+      return;
+    }
+
+    // Board/Backtracking visualization (N-Queens, Sudoku, etc.)
+    if (isBoard(data)) {
+      const cellSize = Math.min((width - margin.left - margin.right) / data[0].length, (height - margin.top - margin.bottom) / data.length);
+      data.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          svg.append('rect')
+            .attr('x', margin.left + j * cellSize)
+            .attr('y', margin.top + i * cellSize)
+            .attr('width', cellSize)
+            .attr('height', cellSize)
+            .attr('fill', cell === 1 ? 'hsl(var(--step-active))' : 'hsl(var(--primary))')
+            .attr('stroke', 'hsl(var(--border))')
+            .attr('stroke-width', 1);
+          if (cell !== 0) {
+            svg.append('text')
+              .attr('x', margin.left + j * cellSize + cellSize / 2)
+              .attr('y', margin.top + i * cellSize + cellSize / 2 + 5)
+              .attr('text-anchor', 'middle')
+              .attr('fill', 'hsl(var(--foreground))')
+              .attr('font-size', '18px')
+              .attr('font-weight', 'bold')
+              .text(cell === 1 ? 'Q' : cell);
+          }
+        });
+      });
+      return;
+    }
+
+    // Bit manipulation visualization
+    if (isBitArray(data)) {
+      const bitStrings = data.map(n => n.toString(2).padStart(32, '0'));
+      const cellSize = 18;
+      bitStrings.forEach((bits, i) => {
+        [...bits].forEach((bit, j) => {
+          svg.append('rect')
+            .attr('x', margin.left + j * cellSize)
+            .attr('y', margin.top + i * cellSize)
+            .attr('width', cellSize)
+            .attr('height', cellSize)
+            .attr('fill', bit === '1' ? 'hsl(var(--step-active))' : 'hsl(var(--primary))')
+            .attr('stroke', 'hsl(var(--border))')
+            .attr('stroke-width', 1);
+          svg.append('text')
+            .attr('x', margin.left + j * cellSize + cellSize / 2)
+            .attr('y', margin.top + i * cellSize + cellSize / 2 + 5)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'hsl(var(--foreground))')
+            .attr('font-size', '12px')
+            .text(bit);
+        });
+      });
+      return;
+    }
 
   }, [currentStep, steps, sampleData]);
 
