@@ -35,31 +35,48 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     const data = currentStepData?.data || sampleData;
     const highlights = currentStepData?.highlights || [];
     
-    // Check if this is a graph algorithm (data contains objects with id property)
-    const isGraphAlgorithm = data.length > 0 && typeof data[0] === 'object' && 'id' in data[0];
-    
+    // Data type detection
+    const isArrayOfNumbers = Array.isArray(data) && typeof data[0] === 'number';
+    const isArrayOfObjects = Array.isArray(data) && typeof data[0] === 'object' && data[0] !== null;
+    const isGraphAlgorithm = isArrayOfObjects && 'id' in data[0];
+
+    // Helper: generate circular node positions for any n
+    function getNodePositions(n, width, height, radius = 150, centerX = width/2, centerY = height/2) {
+      return Array.from({length: n}, (_, i) => {
+        const angle = (2 * Math.PI * i) / n;
+        return {
+          x: centerX + radius * Math.cos(angle),
+          y: centerY + radius * Math.sin(angle)
+        };
+      });
+    }
+
     if (isGraphAlgorithm) {
       // Render graph visualization for algorithms like Dijkstra
       const nodeRadius = 30;
-      const nodePositions = [
-        { x: 150, y: 150 },
-        { x: 350, y: 100 },
-        { x: 350, y: 200 },
-        { x: 550, y: 150 }
-      ];
+      const nodePositions = getNodePositions(data.length, width, height);
+
+      // Try to infer edges if not provided (for Dijkstra, use a simple chain or none)
+      // Optionally, you can update your prompt to return explicit edges
+      let edges = [];
+      if (data.length === 4) {
+        // Default Dijkstra fallback
+        edges = [
+          { from: 0, to: 1, weight: 4 },
+          { from: 0, to: 2, weight: 2 },
+          { from: 1, to: 3, weight: 3 },
+          { from: 2, to: 3, weight: 1 }
+        ];
+      } else if (data.length > 1) {
+        // Simple chain for generic graphs
+        edges = Array.from({length: data.length - 1}, (_, i) => ({ from: i, to: i + 1, weight: 1 }));
+      }
 
       // Draw edges (connections between nodes)
-      const edges = [
-        { from: 0, to: 1, weight: 4 },
-        { from: 0, to: 2, weight: 2 },
-        { from: 1, to: 3, weight: 3 },
-        { from: 2, to: 3, weight: 1 }
-      ];
-
       edges.forEach(edge => {
         const fromPos = nodePositions[edge.from];
         const toPos = nodePositions[edge.to];
-        
+        if (!fromPos || !toPos) return;
         svg.append("line")
           .attr("x1", fromPos.x)
           .attr("y1", fromPos.y)
@@ -67,11 +84,9 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
           .attr("y2", toPos.y)
           .attr("stroke", "hsl(var(--border))")
           .attr("stroke-width", 2);
-          
         // Add edge weight labels
         const midX = (fromPos.x + toPos.x) / 2;
         const midY = (fromPos.y + toPos.y) / 2;
-        
         svg.append("text")
           .attr("x", midX)
           .attr("y", midY - 5)
@@ -85,9 +100,9 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
       // Draw nodes
       data.forEach((node: any, i: number) => {
         const pos = nodePositions[i];
-        const isHighlighted = highlights.includes(node.id);
-        const isVisited = node.visited;
-        
+        if (!pos) return; // Defensive: skip if no position
+        const isHighlighted = node && highlights && node.id !== undefined && highlights.includes(node.id);
+        const isVisited = node && node.visited;
         // Node circle
         svg.append("circle")
           .attr("cx", pos.x)
@@ -101,7 +116,6 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
           .attr("stroke", "hsl(var(--border))")
           .attr("stroke-width", 2)
           .style("opacity", 0.9);
-
         // Node ID
         svg.append("text")
           .attr("x", pos.x)
@@ -110,30 +124,31 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
           .attr("fill", "hsl(var(--primary-foreground))")
           .attr("font-size", "14px")
           .attr("font-weight", "bold")
-          .text(node.id);
-
+          .text(node.id !== undefined ? node.id : i);
         // Distance label
-        const distanceText = node.distance === Infinity ? "∞" : node.distance.toString();
-        svg.append("text")
-          .attr("x", pos.x)
-          .attr("y", pos.y + 10)
-          .attr("text-anchor", "middle")
-          .attr("fill", "hsl(var(--primary-foreground))")
-          .attr("font-size", "12px")
-          .text(distanceText);
+        const distanceText = node.distance === undefined ? '' : (node.distance === Infinity ? "∞" : node.distance.toString());
+        if (distanceText) {
+          svg.append("text")
+            .attr("x", pos.x)
+            .attr("y", pos.y + 10)
+            .attr("text-anchor", "middle")
+            .attr("fill", "hsl(var(--primary-foreground))")
+            .attr("font-size", "12px")
+            .text(distanceText);
+        }
       });
+      return;
+    }
 
-    } else {
-      // Render array visualization for sorting algorithms
+    // Render array visualization for sorting/searching algorithms
+    if (isArrayOfNumbers) {
       const xScale = d3.scaleBand()
         .domain(data.map((_, i) => i.toString()))
         .range([margin.left, width - margin.right])
         .padding(0.1);
-
       const yScale = d3.scaleLinear()
         .domain([0, d3.max(data) || 100])
         .range([height - margin.bottom, margin.top]);
-
       // Create bars with animations
       svg.selectAll(".bar")
         .data(data)
@@ -156,7 +171,6 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
         .duration(500)
         .attr("y", d => yScale(d))
         .attr("height", d => height - margin.bottom - yScale(d));
-
       // Add value labels
       svg.selectAll(".label")
         .data(data)
@@ -174,17 +188,19 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
         .delay(300)
         .duration(300)
         .style("opacity", 1);
+      return;
     }
 
-    // Add step title
+    // If data is not visualizable, show a message
     svg.append("text")
       .attr("x", width / 2)
-      .attr("y", 25)
+      .attr("y", height / 2)
       .attr("text-anchor", "middle")
-      .attr("fill", "hsl(var(--foreground))")
-      .attr("font-size", "18px")
+      .attr("fill", "hsl(var(--destructive))")
+      .attr("font-size", "20px")
       .attr("font-weight", "bold")
-      .text(currentStepData?.title || `Step ${currentStep + 1}`);
+      .text("Cannot visualize this algorithm's data");
+    return;
 
   }, [currentStep, steps, sampleData]);
 
