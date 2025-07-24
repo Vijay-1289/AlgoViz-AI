@@ -24,7 +24,7 @@ export interface AlgorithmResponse {
 export const geminiService = {
   async explainAlgorithm(query: string): Promise<AlgorithmResponse> {
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       
       const prompt = `
         You are an expert algorithm teacher. For the query: "${query}"
