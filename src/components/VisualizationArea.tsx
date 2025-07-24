@@ -502,6 +502,12 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     }
   };
 
+  const handleShowSolution = () => {
+    if (currentStep === steps.length - 1) return;
+    setIsPlaying(true);
+    // If already playing, do nothing (let the normal auto-play logic handle it)
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Visualization Canvas */}
@@ -562,6 +568,15 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
           >
             <SkipForward className="w-4 h-4" />
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleShowSolution}
+            disabled={currentStep === steps.length - 1 || isPlaying}
+            className="ml-4 bg-accent text-white font-bold"
+          >
+            Show Solution
+          </Button>
         </div>
         
         {steps.length > 0 && (
@@ -584,6 +599,33 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
               <div className="bg-background/50 rounded-lg p-3 border border-border/30">
                 <code className="text-sm font-mono text-accent">{steps[currentStep].code}</code>
               </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* Solution Summary Panel (only on last step) */}
+      {currentStep === steps.length - 1 && (
+        <Card className="p-6 bg-gradient-card border-accent/50 border-2">
+          <h3 className="text-lg font-bold mb-2 text-accent">Solution Summary</h3>
+          <div className="text-base text-foreground">
+            {/* Try to summarize the result for common algorithms */}
+            {Array.isArray(steps[currentStep]?.data) && steps[currentStep]?.data.length > 0 && typeof steps[currentStep].data[0] === 'object' ? (
+              <>
+                <div className="mb-2 font-semibold">Final State:</div>
+                <pre className="bg-background/80 rounded p-2 text-sm overflow-x-auto">
+                  {JSON.stringify(steps[currentStep].data, null, 2)}
+                </pre>
+              </>
+            ) : Array.isArray(steps[currentStep]?.data) ? (
+              <>
+                <div className="mb-2 font-semibold">Final Array:</div>
+                <pre className="bg-background/80 rounded p-2 text-sm overflow-x-auto">
+                  {JSON.stringify(steps[currentStep].data)}
+                </pre>
+              </>
+            ) : (
+              <div>No explicit solution data available.</div>
             )}
           </div>
         </Card>
