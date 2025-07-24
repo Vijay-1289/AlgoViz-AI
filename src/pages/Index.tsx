@@ -1,24 +1,31 @@
 import { useState } from "react";
 import { Hero } from "@/components/Hero";
 import { VisualizationArea } from "@/components/VisualizationArea";
+import { AlgorithmResponse } from "@/services/geminiService";
 
 const Index = () => {
-  const [currentAlgorithm, setCurrentAlgorithm] = useState<string>("");
-  const [explanation, setExplanation] = useState<string>("");
+  const [algorithmData, setAlgorithmData] = useState<AlgorithmResponse | null>(null);
+
+  const handleAlgorithmExplained = (data: AlgorithmResponse) => {
+    setAlgorithmData(data);
+    // Scroll to visualization section
+    setTimeout(() => {
+      document.getElementById('visualization')?.scrollIntoView({ 
+        behavior: 'smooth' 
+      });
+    }, 100);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <Hero />
+      <Hero onAlgorithmExplained={handleAlgorithmExplained} />
       
-      {/* Visualization Section - Shows when algorithm is selected */}
-      {currentAlgorithm && (
-        <section className="py-16 px-6">
+      {/* Visualization Section - Shows when algorithm is explained */}
+      {algorithmData && (
+        <section id="visualization" className="py-16 px-6">
           <div className="max-w-6xl mx-auto">
-            <VisualizationArea 
-              algorithm={currentAlgorithm}
-              explanation={explanation}
-            />
+            <VisualizationArea algorithmData={algorithmData} />
           </div>
         </section>
       )}

@@ -1,20 +1,38 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Play, Brain, Zap } from "lucide-react";
+import { Search, Play, Brain, Zap, Loader2 } from "lucide-react";
 import heroImage from "@/assets/hero-algorithm.jpg";
 import { toast } from "sonner";
+import { geminiService } from "@/services/geminiService";
 
-export const Hero = () => {
+interface HeroProps {
+  onAlgorithmExplained: (data: any) => void;
+}
+
+export const Hero = ({ onAlgorithmExplained }: HeroProps) => {
   const [query, setQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!query.trim()) {
       toast("Please enter an algorithm to explore!");
       return;
     }
-    toast(`Analyzing "${query}" with Gemini AI...`);
-    // TODO: Implement Gemini API integration
+    
+    setIsLoading(true);
+    toast("Analyzing with Gemini AI...");
+    
+    try {
+      const result = await geminiService.explainAlgorithm(query);
+      onAlgorithmExplained(result);
+      toast.success(`${result.title} explanation ready!`);
+    } catch (error) {
+      console.error('Error explaining algorithm:', error);
+      toast.error("Failed to explain algorithm. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const exampleQueries = [
@@ -72,11 +90,16 @@ export const Hero = () => {
             </div>
             <Button 
               onClick={handleSearch}
+              disabled={isLoading}
               size="lg"
-              className="h-14 px-8 bg-gradient-hero hover:opacity-90 transition-opacity"
+              className="h-14 px-8 bg-gradient-hero hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              <Play className="w-5 h-5 mr-2" />
-              Visualize
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Play className="w-5 h-5 mr-2" />
+              )}
+              {isLoading ? 'Analyzing...' : 'Visualize'}
             </Button>
           </div>
         </div>

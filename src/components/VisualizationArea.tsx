@@ -3,20 +3,22 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Play, Pause, RotateCcw, SkipForward, SkipBack } from "lucide-react";
 import * as d3 from "d3";
+import { AlgorithmResponse, AlgorithmStep } from "@/services/geminiService";
 
 interface VisualizationAreaProps {
-  algorithm?: string;
-  explanation?: string;
-  steps?: any[];
+  algorithmData: AlgorithmResponse;
 }
 
-export const VisualizationArea = ({ algorithm, explanation, steps }: VisualizationAreaProps) => {
+export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
+
+  const { title, explanation, complexity, steps, sampleData } = algorithmData;
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !steps.length) return;
 
     // Initialize D3 visualization
     const svg = d3.select(svgRef.current);
@@ -24,49 +26,99 @@ export const VisualizationArea = ({ algorithm, explanation, steps }: Visualizati
 
     const width = 800;
     const height = 400;
-    const margin = { top: 20, right: 20, bottom: 40, left: 40 };
+    const margin = { top: 40, right: 40, bottom: 60, left: 40 };
 
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
-    // Sample data for demonstration (replace with actual algorithm data)
-    const sampleData = [64, 34, 25, 12, 22, 11, 90];
+    // Get current step data
+    const currentStepData = steps[currentStep];
+    const data = currentStepData?.data || sampleData;
+    const highlights = currentStepData?.highlights || [];
     
     const xScale = d3.scaleBand()
-      .domain(sampleData.map((_, i) => i.toString()))
+      .domain(data.map((_, i) => i.toString()))
       .range([margin.left, width - margin.right])
       .padding(0.1);
 
     const yScale = d3.scaleLinear()
-      .domain([0, d3.max(sampleData) || 0])
+      .domain([0, d3.max(data) || 100])
       .range([height - margin.bottom, margin.top]);
 
-    // Create bars
+    // Create bars with animations
     svg.selectAll(".bar")
-      .data(sampleData)
+      .data(data)
       .join("rect")
       .attr("class", "bar")
       .attr("x", (_, i) => xScale(i.toString()) || 0)
-      .attr("y", d => yScale(d))
+      .attr("y", height - margin.bottom)
       .attr("width", xScale.bandwidth())
-      .attr("height", d => height - margin.bottom - yScale(d))
-      .attr("fill", "hsl(var(--primary))")
+      .attr("height", 0)
+      .attr("fill", (_, i) => {
+        if (highlights.includes(i)) {
+          return currentStepData?.action === "swap" ? "hsl(var(--step-complete))" : "hsl(var(--step-active))";
+        }
+        return "hsl(var(--primary))";
+      })
       .attr("stroke", "hsl(var(--border))")
       .attr("stroke-width", 1)
-      .style("opacity", 0.8);
+      .style("opacity", 0.9)
+      .transition()
+      .duration(500)
+      .attr("y", d => yScale(d))
+      .attr("height", d => height - margin.bottom - yScale(d));
 
     // Add value labels
     svg.selectAll(".label")
-      .data(sampleData)
+      .data(data)
       .join("text")
       .attr("class", "label")
       .attr("x", (_, i) => (xScale(i.toString()) || 0) + xScale.bandwidth() / 2)
-      .attr("y", d => yScale(d) - 5)
+      .attr("y", height - margin.bottom + 15)
       .attr("text-anchor", "middle")
       .attr("fill", "hsl(var(--foreground))")
-      .attr("font-size", "12px")
-      .text(d => d);
+      .attr("font-size", "14px")
+      .attr("font-weight", "600")
+      .text(d => d)
+      .style("opacity", 0)
+      .transition()
+      .delay(300)
+      .duration(300)
+      .style("opacity", 1);
 
-  }, [algorithm, currentStep]);
+    // Add step title
+    svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", 25)
+      .attr("text-anchor", "middle")
+      .attr("fill", "hsl(var(--foreground))")
+      .attr("font-size", "18px")
+      .attr("font-weight", "bold")
+      .text(currentStepData?.title || `Step ${currentStep + 1}`);
+
+  }, [currentStep, steps, sampleData]);
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (isPlaying && steps.length > 0) {
+      const id = setInterval(() => {
+        setCurrentStep(prev => {
+          if (prev >= steps.length - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 2000);
+      setIntervalId(id);
+    } else if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isPlaying, steps.length]);
 
   const handlePlay = () => {
     setIsPlaying(!isPlaying);
@@ -75,6 +127,10 @@ export const VisualizationArea = ({ algorithm, explanation, steps }: Visualizati
   const handleReset = () => {
     setCurrentStep(0);
     setIsPlaying(false);
+    if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
   };
 
   const handleStepForward = () => {
@@ -95,11 +151,14 @@ export const VisualizationArea = ({ algorithm, explanation, steps }: Visualizati
       <Card className="p-6 bg-gradient-card border-border/30">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Algorithm Visualization</h3>
-          {algorithm && (
+          <div className="flex items-center gap-3">
             <span className="px-3 py-1 text-sm bg-primary/10 text-primary rounded-full">
-              {algorithm}
+              {title}
             </span>
-          )}
+            <span className="px-3 py-1 text-sm bg-muted text-muted-foreground rounded-full">
+              {complexity}
+            </span>
+          </div>
         </div>
         
         <div className="bg-background/50 rounded-lg p-4 border border-border/30">
@@ -142,30 +201,46 @@ export const VisualizationArea = ({ algorithm, explanation, steps }: Visualizati
             variant="outline"
             size="sm"
             onClick={handleStepForward}
-            disabled={!steps || currentStep >= steps.length - 1}
+            disabled={!steps.length || currentStep >= steps.length - 1}
           >
             <SkipForward className="w-4 h-4" />
           </Button>
         </div>
         
-        {steps && (
+        {steps.length > 0 && (
           <div className="mt-3 text-center text-sm text-muted-foreground">
             Step {currentStep + 1} of {steps.length}
           </div>
         )}
       </Card>
 
-      {/* Algorithm Explanation */}
-      {explanation && (
+      {/* Current Step Details */}
+      {steps.length > 0 && (
         <Card className="p-6 bg-gradient-card border-border/30">
-          <h3 className="text-lg font-semibold mb-4">AI Explanation</h3>
-          <div className="prose prose-invert max-w-none">
-            <p className="text-muted-foreground leading-relaxed">
-              {explanation}
-            </p>
+          <h3 className="text-lg font-semibold mb-4">Current Step</h3>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-medium text-primary">{steps[currentStep]?.title}</h4>
+              <p className="text-muted-foreground mt-1">{steps[currentStep]?.description}</p>
+            </div>
+            {steps[currentStep]?.code && (
+              <div className="bg-background/50 rounded-lg p-3 border border-border/30">
+                <code className="text-sm font-mono text-accent">{steps[currentStep].code}</code>
+              </div>
+            )}
           </div>
         </Card>
       )}
+
+      {/* Algorithm Explanation */}
+      <Card className="p-6 bg-gradient-card border-border/30">
+        <h3 className="text-lg font-semibold mb-4">AI Explanation</h3>
+        <div className="prose prose-invert max-w-none">
+          <p className="text-muted-foreground leading-relaxed">
+            {explanation}
+          </p>
+        </div>
+      </Card>
     </div>
   );
 };
