@@ -238,43 +238,53 @@ export const VisualizationArea = ({ algorithmData }: VisualizationAreaProps) => 
     // Render generic array of objects as a table
     if (isArrayOfObjects) {
       const keys = Object.keys(data[0]);
-      const cellSize = 40;
+      const numRows = data.length;
+      const numCols = keys.length;
+      // Calculate cell size dynamically
+      const cellPadding = 8;
+      const cellWidth = Math.max(60, Math.floor((width - margin.left - margin.right) / numCols));
+      const cellHeight = Math.max(32, Math.floor((height - margin.top - margin.bottom) / (numRows + 1)));
       // Draw header
       keys.forEach((key, j) => {
         svg.append("rect")
-          .attr("x", margin.left + j * cellSize)
+          .attr("x", margin.left + j * cellWidth)
           .attr("y", margin.top)
-          .attr("width", cellSize)
-          .attr("height", cellSize)
-          .attr("fill", "hsl(var(--accent))")
+          .attr("width", cellWidth)
+          .attr("height", cellHeight)
+          .attr("fill", "#2ecc40") // green header
           .attr("stroke", "hsl(var(--border))")
           .attr("stroke-width", 1);
         svg.append("text")
-          .attr("x", margin.left + j * cellSize + cellSize / 2)
-          .attr("y", margin.top + cellSize / 2 + 5)
+          .attr("x", margin.left + j * cellWidth + cellWidth / 2)
+          .attr("y", margin.top + cellHeight / 2 + 6)
           .attr("text-anchor", "middle")
-          .attr("fill", "hsl(var(--foreground))")
-          .attr("font-size", "14px")
+          .attr("fill", "#fff")
+          .attr("font-size", "18px")
           .attr("font-weight", "bold")
           .text(key);
       });
       // Draw rows
       data.forEach((row, i) => {
         keys.forEach((key, j) => {
+          const isHeader = i === -1;
+          const isEvenRow = i % 2 === 0;
+          let cellColor = isEvenRow ? "#5a2ca0" : "#3d1a6e";
+          if (typeof row[key] === 'boolean') cellColor = row[key] ? "#2ecc40" : "#e74c3c";
           svg.append("rect")
-            .attr("x", margin.left + j * cellSize)
-            .attr("y", margin.top + (i + 1) * cellSize)
-            .attr("width", cellSize)
-            .attr("height", cellSize)
-            .attr("fill", highlights && highlights.includes(i) ? "hsl(var(--step-active))" : "hsl(var(--primary))")
+            .attr("x", margin.left + j * cellWidth)
+            .attr("y", margin.top + (i + 1) * cellHeight)
+            .attr("width", cellWidth)
+            .attr("height", cellHeight)
+            .attr("fill", cellColor)
             .attr("stroke", "hsl(var(--border))")
             .attr("stroke-width", 1);
           svg.append("text")
-            .attr("x", margin.left + j * cellSize + cellSize / 2)
-            .attr("y", margin.top + (i + 1) * cellSize + cellSize / 2 + 5)
+            .attr("x", margin.left + j * cellWidth + cellWidth / 2)
+            .attr("y", margin.top + (i + 1) * cellHeight + cellHeight / 2 + 6)
             .attr("text-anchor", "middle")
-            .attr("fill", "hsl(var(--foreground))")
-            .attr("font-size", "14px")
+            .attr("fill", typeof row[key] === 'boolean' ? '#fff' : '#fff')
+            .attr("font-size", "17px")
+            .attr("font-weight", typeof row[key] === 'boolean' ? 'bold' : 'normal')
             .text(row[key]);
         });
       });
