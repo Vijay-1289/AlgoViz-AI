@@ -48,64 +48,148 @@ export const geminiService = {
           "sampleData": [initial array of numbers for visualization]
         }
         
-        Focus on popular algorithms like:
-        - Sorting: Bubble Sort, Merge Sort, Quick Sort, Insertion Sort
-        - Search: Binary Search, Linear Search
-        - Graph: DFS, BFS, Dijkstra's Algorithm
-        - Dynamic Programming: Fibonacci, Knapsack
+        Focus on the specific algorithm mentioned in the query. If it's:
+        - Sorting algorithms (Bubble Sort, Merge Sort, Quick Sort, Insertion Sort): Use array visualization
+        - Search algorithms (Binary Search, Linear Search): Use array with target highlighting
+        - Graph algorithms (DFS, BFS, Dijkstra): Use simple graph representation with numbered nodes
+        - Dynamic Programming: Use appropriate data structure visualization
         
-        Provide 5-8 detailed steps that can be animated. Use simple number arrays (6-8 elements) for visualization.
-        Make sure the JSON is valid and complete.
+        For graph algorithms like Dijkstra, use this format:
+        - "data": represent as array of objects [{"id": 0, "distance": 0, "visited": false}, {"id": 1, "distance": Infinity, "visited": false}]
+        - "highlights": array of node IDs currently being processed
+        
+        Provide 5-8 detailed steps that can be animated. Make sure the JSON is valid and complete.
+        Return ONLY the JSON, no additional text.
       `;
       
+      console.log('Calling Gemini API for query:', query);
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
       
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in response');
+      console.log('Raw Gemini response:', text);
+      
+      // Extract JSON from response - look for content between first { and last }
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new Error('No valid JSON structure found in response');
       }
       
-      const algorithmData = JSON.parse(jsonMatch[0]);
+      const jsonText = text.substring(firstBrace, lastBrace + 1);
+      console.log('Extracted JSON:', jsonText);
+      
+      const algorithmData = JSON.parse(jsonText);
+      console.log('Parsed algorithm data:', algorithmData);
+      
+      // Validate the response has required fields
+      if (!algorithmData.title || !algorithmData.steps || !Array.isArray(algorithmData.steps)) {
+        throw new Error('Invalid response structure from Gemini');
+      }
+      
       return algorithmData;
       
     } catch (error) {
       console.error('Error calling Gemini API:', error);
       
-      // Fallback response for demonstration
+      // Return algorithm-specific fallback based on the query
+      if (query.toLowerCase().includes('dijkstra')) {
+        return {
+          title: "Dijkstra's Shortest Path Algorithm",
+          explanation: "Dijkstra's algorithm finds the shortest path between nodes in a weighted graph. It works by maintaining a set of unvisited nodes and continuously selecting the node with the minimum distance.",
+          complexity: "O((V + E) log V) time, O(V) space",
+          steps: [
+            {
+              step: 1,
+              title: "Initialize",
+              description: "Set distance to start node as 0, all others as infinity",
+              data: [
+                {"id": 0, "distance": 0, "visited": false},
+                {"id": 1, "distance": Infinity, "visited": false},
+                {"id": 2, "distance": Infinity, "visited": false},
+                {"id": 3, "distance": Infinity, "visited": false}
+              ],
+              highlights: [0],
+              action: "initialize"
+            },
+            {
+              step: 2,
+              title: "Select minimum",
+              description: "Select unvisited node with minimum distance (node 0)",
+              data: [
+                {"id": 0, "distance": 0, "visited": true},
+                {"id": 1, "distance": Infinity, "visited": false},
+                {"id": 2, "distance": Infinity, "visited": false},
+                {"id": 3, "distance": Infinity, "visited": false}
+              ],
+              highlights: [0],
+              action: "select"
+            },
+            {
+              step: 3,
+              title: "Update neighbors",
+              description: "Update distances to neighbors of node 0",
+              data: [
+                {"id": 0, "distance": 0, "visited": true},
+                {"id": 1, "distance": 4, "visited": false},
+                {"id": 2, "distance": 2, "visited": false},
+                {"id": 3, "distance": Infinity, "visited": false}
+              ],
+              highlights: [1, 2],
+              action: "update"
+            }
+          ],
+          sampleData: [
+            {"id": 0, "distance": 0, "visited": false},
+            {"id": 1, "distance": Infinity, "visited": false},
+            {"id": 2, "distance": Infinity, "visited": false},
+            {"id": 3, "distance": Infinity, "visited": false}
+          ]
+        };
+      } else if (query.toLowerCase().includes('merge sort')) {
+        return {
+          title: "Merge Sort",
+          explanation: "Merge Sort is a divide-and-conquer algorithm that divides the array into halves, sorts them separately, and then merges them back together.",
+          complexity: "O(n log n) time, O(n) space",
+          steps: [
+            {
+              step: 1,
+              title: "Initial Array",
+              description: "Start with unsorted array",
+              data: [38, 27, 43, 3, 9, 82, 10],
+              highlights: [],
+              action: "initialize"
+            },
+            {
+              step: 2,
+              title: "Divide",
+              description: "Divide array into two halves",
+              data: [38, 27, 43, 3, 9, 82, 10],
+              highlights: [0, 1, 2],
+              action: "divide"
+            }
+          ],
+          sampleData: [38, 27, 43, 3, 9, 82, 10]
+        };
+      }
+      
+      // Default fallback for any other algorithm
       return {
-        title: "Bubble Sort",
-        explanation: "Bubble Sort is a simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.",
-        complexity: "O(n²) time, O(1) space",
+        title: "Algorithm Visualization",
+        explanation: "Unable to connect to Gemini AI. Please check your internet connection and try again.",
+        complexity: "N/A",
         steps: [
           {
             step: 1,
-            title: "Initialize",
-            description: "Start with the unsorted array",
-            data: [64, 34, 25, 12, 22, 11, 90],
+            title: "Connection Error",
+            description: "Could not fetch algorithm explanation from Gemini AI",
+            data: [1, 2, 3, 4, 5],
             highlights: [],
-            action: "initialize"
-          },
-          {
-            step: 2,
-            title: "Compare first pair",
-            description: "Compare adjacent elements 64 and 34",
-            data: [64, 34, 25, 12, 22, 11, 90],
-            highlights: [0, 1],
-            action: "compare"
-          },
-          {
-            step: 3,
-            title: "Swap elements",
-            description: "Since 64 > 34, swap them",
-            data: [34, 64, 25, 12, 22, 11, 90],
-            highlights: [0, 1],
-            action: "swap"
+            action: "error"
           }
         ],
-        sampleData: [64, 34, 25, 12, 22, 11, 90]
+        sampleData: [1, 2, 3, 4, 5]
       };
     }
   }
