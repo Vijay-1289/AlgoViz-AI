@@ -1,73 +1,50 @@
-# Welcome to your Lovable project
+<h1 align="center">🧠 AlgoViz-AI</h1>
+<p align="center">
+  <em>Visualize algorithms with AI-enhanced interactivity and clarity.</em>
+</p>
 
-## Project info
+---
 
-**URL**: https://lovable.dev/projects/f167b9bd-c2dd-4be0-853c-e668d31b6cbd
+##  Overview
+**AlgoViz-AI** is an interactive platform that makes **algorithm learning and visualization smarter and more intuitive**. Powered by AI, it transforms code into dynamic visualizations, helping learners grasp complex concepts faster and more effectively.
 
-## How can I edit this code?
+Ideal for educators, students, and developers—AlgoViz-AI brings algorithms to life.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+##  Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f167b9bd-c2dd-4be0-853c-e668d31b6cbd) and start prompting.
+| Feature              | Description |
+|---------------------|-------------|
+| 🤖 AI-Enhanced Diagrams | Automatically generate visual steps from algorithm logic. |
+| ▶ Live Animations       | Step through algorithms with smooth, intuitive visuals. |
+| 🛠 Custom Code Input    | Paste your own algorithm code and see it visualized. |
+| 🔄 Real-Time Preview    | Instant feedback as you tweak parameters. |
+| 🎨 Multiple Styles      | Choose from graph, tree, array, and flowchart views. |
+| 🌐 Web-Based            | Runs in your browser with no installation needed. |
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+##  Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Frontend:** React (TypeScript), Vite
+- **Styling:** Tailwind CSS, shadcn-ui
+- **AI Tools:** (e.g., OpenAI or custom model) — integrate for generating visuals
+- **Build Tools:** Vite, npm
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+##  Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Clone the repo
+git clone https://github.com/Vijay-1289/AlgoViz-AI.git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Enter the directory
+cd AlgoViz-AI
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Run the development server
 npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/f167b9bd-c2dd-4be0-853c-e668d31b6cbd) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
